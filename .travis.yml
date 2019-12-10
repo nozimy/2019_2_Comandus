@@ -8,7 +8,7 @@ script:
 - ssh-keyscan -H 89.208.211.100 >> ~/.ssh/known_hosts
 - chmod 600 $HOME/.ssh/2019-2-Comandus-OINib2To.pem
 - ssh-add $HOME/.ssh/2019-2-Comandus-OINib2To.pem
-- ssh ubuntu@89.208.211.100 "rm -rf FRONT_Comandus/"
+- ssh -i $HOME/.ssh/2019-2-Comandus-OINib2To.pem ubuntu@89.208.211.100 "rm -rf FRONT_Comandus/"
 - travis_wait 20 scp -r ./dist ubuntu@89.208.211.100:/home/ubuntu/FRONT_Comandus
 before_install:
 - openssl aes-256-cbc -K $encrypted_3f2eaa0984ec_key -iv $encrypted_3f2eaa0984ec_iv
