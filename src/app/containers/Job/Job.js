@@ -1,7 +1,14 @@
 import Component from '@frame/Component';
 import template from './Job.handlebars';
 import './Job.scss';
-import { jobTypes, levels, busEvents, specialitiesRow } from '@app/constants';
+import {
+	jobTypes,
+	levels,
+	busEvents,
+	specialitiesRow,
+	proposalStatuses,
+	jobStatuses,
+} from '@app/constants';
 import Button from '@components/inputs/Button/Button';
 import FeatureComponent from '@components/dataDisplay/FeatureComponent';
 import FeaturesList from '@components/dataDisplay/FeaturesList';
@@ -13,7 +20,15 @@ import Modal from '@components/Modal/Modal';
 import SendProposalForm from '@components/SendProposalForm';
 import ProposalItem from '@components/dataDisplay/ProposalItem';
 import ProposalService from '@services/ProposalService';
-import { formatDate } from '@modules/utils';
+import {
+	formatDate,
+	formatMoney,
+	getExperienceLevelName,
+	getJoTypeName,
+	isProposalActive,
+	isProposalClosed,
+} from '@modules/utils';
+import JobService from '@services/JobService';
 
 export default class Job extends Component {
 	constructor(props) {
@@ -68,9 +83,17 @@ export default class Job extends Component {
 			className: 'btn_secondary',
 		});
 
-		const type = jobTypes.find(
-			(j) => j.value == this.data.job['jobTypeId'],
-		);
+		this._togglePublish = new Button({
+			type: 'button',
+			text:
+				this.data.job.status === jobStatuses.CLOSED
+					? 'Опубликовать'
+					: 'Закрыть',
+			className: 'btn_secondary',
+			onClick: this.togglePublish,
+		});
+
+		const type = getJoTypeName(this.data.job['jobTypeId']);
 
 		this._jobType = new FeatureComponent({
 			title: 'Тип работы',
@@ -78,7 +101,7 @@ export default class Job extends Component {
 		});
 		this._jobBudget = new FeatureComponent({
 			title: 'Бюджет',
-			data: this.data.job['paymentAmount'] + ' ₽',
+			data: formatMoney(this.data.job['paymentAmount']),
 		});
 		this._jobLevel = new FeatureComponent({
 			title: 'Уровень фрилансера',
@@ -98,6 +121,7 @@ export default class Job extends Component {
 				className: 'job-details__inner-item',
 			}).render(),
 			sendProposalFormModal: this.sendProposalFormModal.render(),
+			_togglePublish: this._togglePublish.render(),
 		};
 
 		this.html = template(this.data);
@@ -111,13 +135,16 @@ export default class Job extends Component {
 		this._submitProposalMobile.postRender();
 		this.sendProposalFormModal.postRender();
 		this.sendProposalForm.postRender();
+		this._togglePublish.postRender();
 	}
 
 	jobUpdated = () => {
 		bus.off(busEvents.JOB_UPDATED, this.jobUpdated);
 		const job = store.get(['job']);
-		job['skills'] = job['skills'] ? job['skills'].split(',') : [];
-		job['experienceLevel'] = levels[job['experienceLevelId'] - 1];
+		job['skills'] = job['tagLine'] ? job['tagLine'].split(',') : [];
+		job['experienceLevel'] = getExperienceLevelName(
+			job['experienceLevelId'],
+		);
 		job['speciality'] = specialitiesRow[job['specialityId']];
 		job['created'] = formatDate(job.date); //new Date(job.date).toDateString();
 		job['type'] = jobTypes.find(
@@ -178,18 +205,44 @@ export default class Job extends Component {
 
 	onProposalsGet = ({ response, error }) => {
 		if (error || !response) {
+			this.data = {
+				proposals: null,
+			};
 			return;
 		}
-
-		console.log(response);
 
 		response = response.map((r) => {
 			r.Response.date = formatDate(r.Response.date);
 			return r;
 		});
 
+		const activeProposals = response.filter((el) => {
+			return isProposalActive(el.Response);
+		});
+
+		const closedProposals = response.filter((el) => {
+			return isProposalClosed(el.Response);
+		});
+
+		const sentProposals = response.filter((el) => {
+			return (
+				el.Response.statusFreelancer === proposalStatuses.SENT &&
+				el.Response.statusManager === proposalStatuses.REVIEW
+			);
+		});
+
+		const showActiveProposals = activeProposals.length > 0;
+		const showClosedProposals = closedProposals.length > 0;
+		const showSentProposals = sentProposals.length > 0;
+
 		this.data = {
-			proposals: response,
+			empty: !response.length,
+			activeProposals,
+			showActiveProposals,
+			closedProposals,
+			showClosedProposals,
+			sentProposals,
+			showSentProposals,
 		};
 
 		this.stateChanged();
@@ -197,5 +250,41 @@ export default class Job extends Component {
 
 	renderProposalItem = (proposal) => {
 		return new ProposalItem(proposal).render();
+	};
+
+	togglePublish = () => {
+		if (this.data.job.status === jobStatuses.CLOSED) {
+			if (!this.data.isRequest) {
+				this.data = {
+					isRequest: true,
+				};
+				return JobService.OpenJob(this.props.params.jobId).then(() => {
+					this.data = {
+						isRequest: false,
+					};
+					return this.togglePublishResponse();
+				});
+			}
+		}
+
+		if (this.data.job.status !== jobStatuses.CLOSED) {
+			if (!this.data.isRequest) {
+				this.data = {
+					isRequest: true,
+				};
+				return JobService.CloseJob(this.props.params.jobId).then(() => {
+					this.data = {
+						isRequest: false,
+					};
+					return this.togglePublishResponse();
+				});
+			}
+		}
+	};
+
+	togglePublishResponse = () => {
+		bus.off(busEvents.JOB_UPDATED, this.jobUpdated);
+		bus.on(busEvents.JOB_UPDATED, this.jobUpdated);
+		bus.emit(busEvents.JOB_GET, this.props.params.jobId);
 	};
 }

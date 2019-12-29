@@ -1,3 +1,7 @@
+import { dueTimes, jobTypes, levels, proposalStatuses } from '@app/constants';
+import UtilService from '@services/UtilService';
+import store from '@modules/store';
+
 /**
  * @param {String} html representing a single element
  * @return {Node}
@@ -123,10 +127,118 @@ export function formatDate(dateString) {
 	return `${day}.${m}.${d.getFullYear()}`;
 }
 
-function formatDateNum(num) {
+export function formatDateNum(num) {
 	if (num > 0 && num < 9) {
 		return '0' + num;
 	}
 
 	return num;
+}
+
+export function formatMoney(amount) {
+	if (!amount) {
+		return;
+	}
+
+	const formatter = new Intl.NumberFormat('ru-RU', {
+		style: 'currency',
+		currency: 'RUB',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0,
+	});
+
+	return formatter.format(amount);
+}
+
+export function getJoTypeName(jobTypeId) {
+	return jobTypes.find((j) => j.value == jobTypeId);
+}
+
+export function getExperienceLevelName(experienceLevelId) {
+	return levels[experienceLevelId];
+}
+
+export function getTimeEstimationName(id) {
+	return dueTimes[id];
+}
+
+export function isProposalClosed(proposal) {
+	return (
+		proposal.statusFreelancer === proposalStatuses.CANCEL ||
+		proposal.statusFreelancer === proposalStatuses.DENIED ||
+		proposal.statusFreelancer === proposalStatuses.ACCEPTED ||
+		proposal.statusManager === proposalStatuses.DENIED
+	);
+}
+
+export function isProposalActive(proposal) {
+	return (
+		proposal.statusFreelancer === proposalStatuses.SENT &&
+		(proposal.statusManager === proposalStatuses.ACCEPTED ||
+			proposal.statusManager === proposalStatuses.SENT_CONTRACT)
+	);
+}
+
+export async function getCountryAndCityIdByName(countryName, cityName) {
+	const countryList = UtilService.MapCountriesToSelectList();
+
+	if (!countryList) {
+		console.error('Unavailable to get country list!');
+		return;
+	}
+
+	const currentCountry = countryList.find((country) => {
+		return country.label === countryName;
+	});
+
+	let countryId = -1;
+	if (currentCountry) {
+		countryId = currentCountry.value;
+	} else {
+		console.error('Unable to resolve country name: ', countryName);
+		return;
+	}
+	let cityId = -1;
+
+	await UtilService.getCityListByCountry(countryId).then((cities) => {
+		const currentCity = cities.find((city) => {
+			return city.label === cityName;
+		});
+
+		if (currentCity) {
+			cityId = currentCity.value;
+		}
+	});
+
+	if (cityId === -1) {
+		console.error('Unable to resolve city name: ', cityName);
+		return;
+	}
+
+	return {
+		country: countryId,
+		city: cityId,
+	};
+}
+
+export function debounce(func, wait, immediate) {
+	let timeout;
+
+	return function executedFunction() {
+		const context = this;
+		const args = arguments;
+
+		const later = function() {
+			timeout = null;
+			if (!immediate) func.apply(context, args);
+		};
+
+		const callNow = immediate && !timeout;
+
+		clearTimeout(timeout);
+
+		timeout = setTimeout(later, wait);
+
+		if (callNow) func.apply(context, args);
+	};
 }

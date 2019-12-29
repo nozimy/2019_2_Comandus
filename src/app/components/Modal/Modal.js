@@ -25,6 +25,10 @@ export default class Modal extends Component {
 	postRender() {
 		this._el = document.getElementById(this._id);
 
+		if (!this._el) {
+			return;
+		}
+
 		const closeBtn = this._el.querySelectorAll(
 			'.modal-header__close-icon',
 		)[0];
@@ -57,12 +61,12 @@ export default class Modal extends Component {
 		this.data.display = true;
 		this.postRender();
 	}
-	close() {
+	close = () => {
 		if (this._el.classList.contains('modal-window_display')) {
 			this._el.classList.remove('modal-window_display');
 		}
 		this._el.classList.add('modal-window_hide');
 		this.data.display = false;
 		this.postRender();
-	}
+	};
 }

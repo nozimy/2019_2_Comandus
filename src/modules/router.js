@@ -1,6 +1,8 @@
 import Frame from '@frame/frame';
 import AuthService from '@services/AuthService';
 import AccountService from '@services/AccountService';
+import bus from '@frame/bus';
+import { busEvents } from '@app/constants';
 
 function getParamsFromSearch(search) {
 	const params = {};
@@ -10,6 +12,28 @@ function getParamsFromSearch(search) {
 	return params;
 }
 
+const restrictedUrls = [
+	'/new-job',
+	'/messages',
+	'/my-job-postings',
+	'/settings',
+	'/my-contracts',
+	'/my-contracts/:contractId',
+	'/saved',
+	'/proposals',
+	'/proposals/:proposalId',
+	'/contracts/new',
+	'/jobs/:jobId/edit',
+	'/dashboard',
+];
+
+const restrictedUrlsForFreelancer = [
+	'/new-job',
+	'/my-job-postings',
+	'/jobs/:jobId/edit',
+];
+
+const restrictedUrlsForClient = ['/proposals'];
 /**
  * место для вставки роутов (switch)
  * ссылки
@@ -64,14 +88,15 @@ export class Router {
 			this.push(currentPath, window.location.search);
 		});
 
-		const routerLinks = document.getElementsByClassName('router-link');
-		Array.from(routerLinks).forEach((element) => {
-			element.addEventListener('click', (event) => {
-				event.preventDefault();
-				const { currentTarget } = event;
-				this.push(currentTarget.pathname, currentTarget.search);
-			});
-		});
+		// const routerLinks = document.getElementsByClassName('router-link');
+		// Array.from(routerLinks).forEach((element) => {
+		// 	element.addEventListener('click', (event) => {
+		// 		event.preventDefault();
+		// 		const { currentTarget } = event;
+		// 		this.push(currentTarget.pathname, currentTarget.search);
+		// 	});
+		// });
+		this.listenClasses();
 
 		const currentPath = window.location.pathname;
 
@@ -114,11 +139,29 @@ export class Router {
 			}
 
 			if (path === '/') {
-				if (AccountService.isClient()) {
-					this.push('/freelancers');
+				this.push('/dashboard');
+				// if (AccountService.isClient()) {
+				// 	this.push('/freelancers');
+				// 	return;
+				// }
+				// this.push('/jobs');
+				return;
+			}
+
+			if (AccountService.isClient()) {
+				if (restrictedUrlsForClient.includes(route.path)) {
+					this.push('/');
 					return;
 				}
-				this.push('/jobs');
+			} else {
+				if (restrictedUrlsForFreelancer.includes(route.path)) {
+					this.push('/');
+					return;
+				}
+			}
+		} else {
+			if (restrictedUrls.includes(route.path)) {
+				this.push('/');
 				return;
 			}
 		}
@@ -156,6 +199,8 @@ export class Router {
 			el,
 			props,
 		};
+
+		bus.emit(busEvents.ROUTE_CHANGED, path);
 	}
 
 	match(route, requestPath) {
@@ -184,5 +229,21 @@ export class Router {
 		route.props = { ...route.props, params };
 
 		return routeMatch;
+	}
+
+	listenClasses() {
+		const routerLinks = document.getElementsByClassName('router-link');
+		Array.from(routerLinks).forEach((element) => {
+			element.addEventListener('click', (event) => {
+				event.preventDefault();
+				const { currentTarget } = event;
+				const pathname = currentTarget.pathname
+					? currentTarget.pathname
+					: currentTarget.dataset.href;
+				if (pathname) {
+					this.push(pathname, currentTarget.search);
+				}
+			});
+		});
 	}
 }

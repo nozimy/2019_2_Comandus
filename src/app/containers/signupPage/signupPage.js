@@ -10,12 +10,12 @@ import { busEvents } from '@app/constants';
 
 const roles = [
 	{
-		value: 'client',
-		label: 'Найти исполнителя',
-	},
-	{
 		value: 'freelancer',
 		label: 'Работать фрилансером',
+	},
+	{
+		value: 'client',
+		label: 'Найти исполнителя',
 	},
 ];
 
@@ -24,7 +24,6 @@ class SignUpComponent extends Component {
 		super(props);
 
 		this.helper = null;
-		this.onSignupResponse = this.onSignupResponse.bind(this);
 	}
 
 	render() {
@@ -35,7 +34,7 @@ class SignUpComponent extends Component {
 			placeholder: 'Введите Ваше имя',
 			name: 'firstName',
 			pattern: '^[А-Яа-яA-Za-z]{2,}$',
-			title: 'Обычно имя так не выглядет. Это Ваше действительное имя?',
+			title: 'Обычно имя так не выглядит. Это Ваше действительное имя?',
 		});
 		const secondNameField = new TextField({
 			required: true,
@@ -45,7 +44,7 @@ class SignUpComponent extends Component {
 			name: 'secondName',
 			pattern: '^[А-Яа-яA-Za-z]{2,}$',
 			title:
-				'Обычно фамилия так не выглядет. Это Ваша действительная фамилия?',
+				'Обычно фамилия так не выглядит. Это Ваша действительная фамилия?',
 		});
 		const emailField = new TextField({
 			required: true,
@@ -65,6 +64,7 @@ class SignUpComponent extends Component {
 			items: roles,
 			required: true,
 			name: 'type',
+			value: 'freelancer',
 		});
 		const submitBtn = new Button({
 			type: 'submit',
@@ -115,7 +115,7 @@ class SignUpComponent extends Component {
 		});
 	}
 
-	onSignupResponse(data) {
+	onSignupResponse = (data) => {
 		bus.off(busEvents.SIGNUP_RESPONSE, this.onSignupResponse);
 		const { response, error } = data;
 		if (error) {
@@ -127,7 +127,7 @@ class SignUpComponent extends Component {
 			return;
 		}
 
-		this.props.router.push('/settings');
-	}
+		this.props.router.push('/');
+	};
 }
 export default SignUpComponent;

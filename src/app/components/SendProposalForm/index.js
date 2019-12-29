@@ -39,7 +39,9 @@ export default class SendProposalForm extends Component {
 			label: 'Предлагаемый бюджет, ₽',
 			placeholder: '',
 			classes: 'width-auto',
-			name: 'PaymentAmount',
+			name: 'paymentAmount',
+			min: 1,
+			max: 1000000,
 		});
 		this.proposalField = new TextField({
 			required: true,
@@ -53,6 +55,7 @@ export default class SendProposalForm extends Component {
 			// className: 'width-auto',
 			name: 'timeEstimation',
 			required: true,
+			className: 'width-auto',
 		});
 
 		this.data = {
@@ -92,13 +95,18 @@ export default class SendProposalForm extends Component {
 
 				this.helper = helper;
 
+				this._submitProposal.el.disabled = true;
+
+				const formData = helper.formToJSON();
+				formData.timeEstimation = parseInt(formData.timeEstimation);
+
 				bus.on(
 					busEvents.PROPOSAL_CREATE_RESPONSE,
 					this.onProposalsResponse,
 				);
 				bus.emit(busEvents.PROPOSAL_CREATE, {
 					jobId: this.data.jobId,
-					formData: helper.formToJSON(),
+					formData: formData,
 				});
 			});
 		}
@@ -107,6 +115,9 @@ export default class SendProposalForm extends Component {
 	onProposalsResponse = (data) => {
 		bus.off(busEvents.PROPOSAL_CREATE_RESPONSE, this.onProposalsResponse);
 		const { error, response } = data;
+
+		this._submitProposal.el.disabled = false;
+
 		if (error) {
 			let text = error.message;
 			if (error.data && error.data.error) {

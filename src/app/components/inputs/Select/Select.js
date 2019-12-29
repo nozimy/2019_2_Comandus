@@ -41,7 +41,7 @@ export class Select extends Component {
 		this._selectedValue = this.props.selected;
 		let selectedItem = null;
 
-		if (this._selectedValue) {
+		if (this._selectedValue !== undefined && this._selectedValue !== '') {
 			selectedItem = this.props.items.find((item) => {
 				return item.value == this._selectedValue;
 			});
@@ -64,6 +64,10 @@ export class Select extends Component {
 
 	postRender() {
 		if (this.props.disabled) {
+			return;
+		}
+
+		if (!this.el) {
 			return;
 		}
 
@@ -165,6 +169,20 @@ export class Select extends Component {
 	switchDropdownActive = () => {
 		if (!this.customSelectElem.classList.contains('select-custom_active')) {
 			this.customSelectElem.classList.add('select-custom_active');
+
+			if (!this.customSelectElem) {
+				return;
+			}
+
+			const selectFilter = this.customSelectElem.querySelector(
+				'.select-dropdown__filter',
+			);
+
+			if (!selectFilter) {
+				return;
+			}
+
+			selectFilter.focus();
 		} else {
 			this.customSelectElem.classList.remove('select-custom_active');
 		}

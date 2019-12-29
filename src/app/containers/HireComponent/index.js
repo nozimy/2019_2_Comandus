@@ -9,9 +9,14 @@ import FieldGroup from '@components/inputs/FieldGroup/FieldGroup';
 import Modal from '@components/Modal/Modal';
 import Alert from '@components/surfaces/Alert';
 import { Select } from '@components/inputs/Select/Select';
-import { dueTimes } from '@app/constants';
+import { busEvents, dueTimes } from '@app/constants';
 import { toSelectElement } from '@modules/utils';
-import CardTitle from '@components/dataDisplay/CardTitle';
+import AuthService from '@services/AuthService';
+import AccountService from '@services/AccountService';
+import ProposalService from '@services/ProposalService';
+import { router } from '@index';
+import { enableValidationAndSubmit } from '@modules/form/formValidationAndSubmit';
+import ContractService from '@services/ContractService';
 
 export default class Hire extends Component {
 	constructor({ someProp = '', children = [], ...props }) {
@@ -23,6 +28,20 @@ export default class Hire extends Component {
 		};
 	}
 
+	preRender() {
+		const loggedIn = AuthService.isLoggedIn();
+		const isClient = AccountService.isClient();
+
+		ProposalService.GetProposalById(this.props.params.proposalId).then(
+			this.onProposalGetResponse,
+		);
+
+		this.data = {
+			isClient,
+			loggedIn,
+		};
+	}
+
 	render() {
 		const budgetField = new TextField({
 			required: true,
@@ -31,16 +50,18 @@ export default class Hire extends Component {
 			placeholder: '',
 			name: 'paymentAmount',
 			value: 0,
+			min: 1,
+			max: 1000000,
 		});
 		this._submitOffer = new Button({
 			type: 'submit',
 			text: 'Отправить предложение',
-			onClick: this.openAlert,
 		});
 		this._cancel = new Button({
 			type: 'button',
 			text: 'Отмена',
 			className: 'btn_secondary',
+			onClick: this.onCancel,
 		});
 		this.afterSubmitAlert = new Alert({
 			approveText: 'Закрыть',
@@ -48,12 +69,13 @@ export default class Hire extends Component {
 			approve: this.closeInfoAlert,
 		});
 		this.afterSubmitInfoModal = new Modal({
-			title: 'Предлжение было отправлено!',
+			title: 'Предложение было отправлено!',
 			children: [this.afterSubmitAlert.render()],
 		});
 		this._timeSelect = new Select({
 			items: dueTimes.map(toSelectElement),
 			attributes: 'required',
+			required: true,
 			className: 'width-auto',
 			name: 'timeEstimation',
 		});
@@ -69,11 +91,8 @@ export default class Hire extends Component {
 			afterSubmitInfoModal: this.afterSubmitInfoModal.render(),
 			timeSelect: new FieldGroup({
 				children: [this._timeSelect.render()],
-				label: 'Сколько времени займет этот проект',
+				label: 'Сколько времени займет этот проект/вакансия',
 			}).render(),
-			// messagesTitle: new CardTitle({
-			// 	title: 'Сообщения (блок появяется после того, как фрилансер стал кандидатом на работу)',
-			// }).render(),
 		};
 
 		const page = new PageWithTitle({
@@ -103,13 +122,50 @@ export default class Hire extends Component {
 		this.afterSubmitInfoModal.postRender();
 		this._submitOffer.postRender();
 		this.afterSubmitAlert.postRender();
+		this._timeSelect.postRender();
+		this._cancel.postRender();
+
+		const form = this.el.querySelector('#newContract');
+
+		if (form) {
+			enableValidationAndSubmit(form, (helper) => {
+				helper.event.preventDefault();
+
+				this.helper = helper;
+				const formData = helper.formToJSON();
+				formData.paymentAmount = parseInt(formData.paymentAmount);
+
+				this.onCreateContractResponse();
+				ContractService.CreateContract(
+					this.props.params.proposalId,
+					formData,
+				).then(this.onCreateContractResponse);
+			});
+		}
 	}
 
 	closeInfoAlert = () => {
 		this.afterSubmitInfoModal.close();
+		router.push('/my-contracts');
 	};
 
 	openAlert = () => {
 		this.afterSubmitInfoModal.show();
+	};
+
+	onProposalGetResponse = (proposal) => {
+		this.data = {
+			proposal: {},
+		};
+
+		this.stateChanged();
+	};
+
+	onCancel = () => {
+		router.push(`/proposals/${this.props.params.proposalId}`);
+	};
+
+	onCreateContractResponse = (res) => {
+		this.openAlert();
 	};
 }

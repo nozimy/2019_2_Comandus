@@ -9,6 +9,9 @@ export default class ProposalItem extends Component {
 		statusManager = '',
 		statusFreelancer = '',
 		paymentAmount = 0,
+		jobTitle = '',
+		isClient = false,
+		freelancerName = '',
 		...props
 	}) {
 		super(props);
@@ -19,6 +22,9 @@ export default class ProposalItem extends Component {
 			statusManager,
 			statusFreelancer,
 			paymentAmount,
+			jobTitle,
+			isClient,
+			freelancerName,
 		};
 	}
 

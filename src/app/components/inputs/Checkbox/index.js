@@ -2,12 +2,22 @@ import Component from '@frame/Component';
 import template from './index.handlebars';
 import './index.scss';
 
-export default class About extends Component {
-	constructor({ children = [], ...props }) {
+export default class Checkbox extends Component {
+	constructor({
+		name = '',
+		value = '',
+		label = '',
+		checked = false,
+		onClicked = () => {},
+		...props
+	}) {
 		super(props);
 
 		this.data = {
-			children,
+			label,
+			checked,
+			value,
+			name,
 		};
 	}
 
@@ -16,8 +26,6 @@ export default class About extends Component {
 			...this.props,
 			...this.data,
 		});
-
-		this.attachToParent();
 
 		return this.html;
 	}
