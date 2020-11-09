@@ -1,0 +1,29 @@
+[Unit]
+Description=Comandus fwork.ru server
+ConditionPathExists=/home/ubuntu/work/2019_2_Comandus/apiserver
+After=network.target
+ 
+[Service]
+Type=simple
+User=sleepservice
+Group=sleepservice
+LimitNOFILE=1024
+
+Restart=on-failure
+RestartSec=10
+startLimitIntervalSec=60
+
+WorkingDirectory=/home/ubuntu/work/2019_2_Comandus/
+ExecStart=/home/ubuntu/work/2019_2_Comandus/apiserver
+
+# make sure log directory exists and owned by syslog
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/log/apiserver
+ExecStartPre=/bin/chown syslog:adm /var/log/apiserver
+ExecStartPre=/bin/chmod 755 /var/log/apiserver
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=sleepservice
+ 
+[Install]
+WantedBy=multi-user.target
